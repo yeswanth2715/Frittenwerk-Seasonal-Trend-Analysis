@@ -1,0 +1,5 @@
+stage,row_count
+Raw rows,243555
+After duplicate removal,243285
+After invalid record removal,243204
+Final clean rows,238789

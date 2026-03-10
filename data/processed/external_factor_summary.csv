@@ -1,0 +1,9 @@
+factor_group,factor_label,total_net_sales,avg_order_value,orders
+Local Event,Standard Days,4175899.36,19.03,219392
+Local Event,Local Event Days,388897.34,20.05,19397
+Weather,Rainy,1397441.17,19.43,71909
+Weather,Cold,1211646.88,19.26,62914
+Weather,Mild,964185.44,19.23,50146
+Weather,Warm,650936.99,18.82,34579
+Weather,Hot,338368.32,17.68,19136
+Weather,Unknown,2217.9,21.12,105

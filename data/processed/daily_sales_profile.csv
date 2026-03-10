@@ -1,0 +1,7 @@
+profile_name,profile_days,p25_daily_sales,median_daily_sales,p75_daily_sales
+Normal Weekday,436,3191.21,3501.58,3813.9
+Normal Weekend,300,6856.68,7577.83,8699.46
+Festival Weekday,31,6516.3,7090.06,8454.74
+Festival Saturday,9,10196.76,10343.07,11441.29
+Christmas Market Weekday,37,4326.46,4665.15,5293.69
+Christmas Market Saturday,8,10420.98,10732.6,11434.82

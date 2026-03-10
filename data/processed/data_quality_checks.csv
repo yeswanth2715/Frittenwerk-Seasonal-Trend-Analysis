@@ -1,0 +1,7 @@
+metric,value
+raw_rows,243555
+exact_duplicates_removed,270
+duplicate_order_ids_removed,0
+invalid_rows_removed,81
+outlier_orders_flagged,4415
+clean_rows,238789

@@ -1,0 +1,13 @@
+stage,metric,skewness
+raw,quantity,1.14
+raw,base_unit_price,-0.627
+raw,unit_price,-0.624
+raw,gross_sales,1.222
+raw,discount_eur,4.984
+raw,net_sales,1.221
+clean,quantity,0.759
+clean,base_unit_price,-0.622
+clean,unit_price,-0.619
+clean,gross_sales,0.758
+clean,discount_eur,2.954
+clean,net_sales,0.756

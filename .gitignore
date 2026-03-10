@@ -1,0 +1,12 @@
+.venv/
+.matplotlib/
+__pycache__/
+.DS_Store
+data/raw/
+data/processed/frittenwerk_sales_clean.csv
+data/processed/outlier_orders.csv
+data/processed/daily_sales_anomalies.csv
+data/processed/customer_segment_seasonality.csv
+data/processed/top_customers_by_sales.csv
+outputs/charts/monthly_seasonality_heatmap.png
+outputs/charts/segment_seasonality.png
