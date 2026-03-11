@@ -39,6 +39,17 @@ The code and outputs follow this funnel:
 6. `Communication`
    Save charts, cleaned datasets, markdown summaries, and a LinkedIn-ready project note.
 
+## Dashboard layer
+
+The project now includes a dashboard-ready output package for BI presentation:
+
+- `Sheet 1 - Uncovering Seasonal Trends`
+  Monthly sales trend, seasonality index, day-type sales profile, festival impact, and food-trend contribution.
+- `Sheet 2 - Inventory Management`
+  Recommended vs observed stock orders, estimated wastage drivers, high-risk stock cycles, and inventory risk patterns.
+
+The generated assets live in `outputs/dashboards/` and can be recreated with `python src/build_dashboard_assets.py`.
+
 ## Project structure
 
 - `data/raw/frittenwerk_sales_raw.csv`: raw sales data with intentional quality issues for demonstration
@@ -62,11 +73,13 @@ The code and outputs follow this funnel:
 - `data/processed/inventory_cycle_summary.csv`: Monday/Thursday stock-cycle view with recommended stock and estimated wastage
 - `data/processed/inventory_wastage_cases.csv`: cycles where festival stock, inconsistent order value, or product mix created excess-stock risk
 - `outputs/charts/`: workflow and insight visuals
+- `outputs/dashboards/`: two dashboard mockups and a Power BI/Tableau build guide
 - `outputs/analysis_summary.md`: business summary of findings
 - `outputs/inventory_observation.md`: separate observation note on stock ordering and wastage
 - `outputs/linkedin_case_study.md`: portfolio-ready wording for LinkedIn
 - `src/generate_sample_data.py`: generates a Frittenwerk-style raw dataset
 - `src/analyze_sales_seasonality.py`: runs the cleaning, QA, demand-driver, inventory, and wastage analysis
+- `src/build_dashboard_assets.py`: creates the two-sheet dashboard mockups and BI build guide
 
 ## Setup
 
@@ -76,6 +89,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python src/generate_sample_data.py
 python src/analyze_sales_seasonality.py
+python src/build_dashboard_assets.py
 ```
 
 ## Main outputs
@@ -96,9 +110,23 @@ After running the project, you can point to:
 - `food_trend_sales_mix.png`
 - `inventory_wastage_by_driver.png`
 - `order_value_boxplot.png`
+- `seasonal_trends_dashboard.png`
+- `inventory_management_dashboard.png`
+- `powerbi_tableau_dashboard_guide.md`
 - `analysis_summary.md`
 - `inventory_observation.md`
 - `linkedin_case_study.md`
+
+## Portfolio outputs
+
+If you want to present the project externally, these are the strongest shareable files:
+
+- `outputs/analysis_summary.md`: concise business summary of the seasonal-demand analysis
+- `outputs/inventory_observation.md`: separate operational note on stock planning and wastage
+- `outputs/linkedin_case_study.md`: ready-to-edit LinkedIn post draft
+- `outputs/dashboards/seasonal_trends_dashboard.png`: dashboard mockup for seasonal sales analysis
+- `outputs/dashboards/inventory_management_dashboard.png`: dashboard mockup for inventory management
+- `outputs/dashboards/powerbi_tableau_dashboard_guide.md`: visual/field guide to rebuild the dashboards in Power BI or Tableau
 
 ## Using real data later
 

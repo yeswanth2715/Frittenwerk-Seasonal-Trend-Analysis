@@ -1406,7 +1406,15 @@ def write_linkedin_note(
     new_poutine_summary: pd.DataFrame,
     daily_profile: pd.DataFrame,
     inventory_cycles: pd.DataFrame,
+    food_trend_summary: pd.DataFrame,
 ) -> None:
+    repo_base_url = "https://github.com/yeswanth2715/Frittenwerk-Seasonal-Trend-Analysis"
+    raw_base_url = "https://raw.githubusercontent.com/yeswanth2715/Frittenwerk-Seasonal-Trend-Analysis/main"
+    summary_url = f"{repo_base_url}/blob/main/outputs/analysis_summary.md"
+    inventory_url = f"{repo_base_url}/blob/main/outputs/inventory_observation.md"
+    seasonal_dashboard_url = f"{raw_base_url}/outputs/dashboards/seasonal_trends_dashboard.png"
+    inventory_dashboard_url = f"{raw_base_url}/outputs/dashboards/inventory_management_dashboard.png"
+
     peak_month = seasonality.sort_values("seasonality_index", ascending=False).iloc[0]
     top_promotion = promotion_summary[
         promotion_summary["promotion_group"] != "No Promotion"
@@ -1420,7 +1428,9 @@ def write_linkedin_note(
         tax_policy_summary["tax_policy_phase"] == "Food VAT 7% from 2026-01-01"
     ].iloc[0]
     top_launch = new_poutine_summary.sort_values("total_net_sales", ascending=False).iloc[0]
+    top_food_trend = food_trend_summary.sort_values("total_net_sales", ascending=False).iloc[0]
     weekend_profile = daily_profile.set_index("profile_name").loc["Normal Weekend"]
+    festival_saturday_profile = daily_profile.set_index("profile_name").loc["Festival Saturday"]
     waste_cycles = inventory_cycles[inventory_cycles["estimated_waste_units"] > 0]
     waste_driver_label = (
         waste_cycles.groupby("primary_wastage_driver", as_index=False)["estimated_waste_units"]
@@ -1430,41 +1440,110 @@ def write_linkedin_note(
         if not waste_cycles.empty
         else "No excess stock"
     )
+    top_waste_driver = (
+        waste_cycles.groupby("primary_wastage_driver", as_index=False)["estimated_waste_units"]
+        .sum()
+        .sort_values("estimated_waste_units", ascending=False)
+        .iloc[0]
+        if not waste_cycles.empty
+        else None
+    )
+    top_waste_cycle = waste_cycles.sort_values("estimated_waste_units", ascending=False).iloc[0] if not waste_cycles.empty else None
+    waste_rate = (
+        inventory_cycles["estimated_waste_units"].sum() / inventory_cycles["observed_stock_order_units"].sum() * 100
+        if inventory_cycles["observed_stock_order_units"].sum() > 0
+        else 0.0
+    )
+    low_sales_cycles = int((inventory_cycles["low_sales_inconsistent_days"] > 0).sum())
 
     linkedin_lines = [
         "# LinkedIn Case Study Draft",
         "",
-        "Project: Sales seasonality, inventory planning, and wastage analysis for a Frittenwerk-style restaurant operation",
+        "## LinkedIn Post Draft",
         "",
-        "Suggested wording:",
         (
-            "I built an end-to-end restaurant analytics case study inspired by my operations experience. Using "
-            "anonymized transaction data, I cleaned inconsistent records, checked missing values, outliers, skewness, "
-            "and anomalies, then measured how NRW school holidays, German festival periods, promotions, new poutine "
-            "launches, and the January 1, 2026 gastronomy VAT change shaped sales. I then translated the seasonal "
-            "signal into a Monday/Thursday inventory-ordering model to estimate wastage risk from festival stock "
-            "uplifts and product-mix shifts."
+            "My manager said there would be an increase in work in the coming week, so I decided to validate that "
+            "operational assumption with data instead of relying only on intuition."
         ),
         "",
-        "Highlights to mention:",
-        f"- Peak seasonal month in the dataset: {peak_month['month_name']}",
+        (
+            "I took the last two years of restaurant sales data, cleaned inconsistent records, checked missing values, "
+            "outliers, skewness, and anomalies, and then analyzed seasonal demand patterns, promotions, festivals, "
+            "NRW school holidays, menu trends, and pricing changes."
+        ),
+        "",
+        "A few insights from the project:",
+        f"- {peak_month['month_name']} was the strongest seasonal month, while Aug was the weakest.",
+        (
+            f"- Normal weekend sales were around "
+            f"{weekend_profile['p25_daily_sales']:,.0f}-{weekend_profile['p75_daily_sales']:,.0f} per day."
+        ),
+        (
+            f"- Festival Saturdays were around {festival_saturday_profile['p25_daily_sales']:,.0f}-"
+            f"{festival_saturday_profile['p75_daily_sales']:,.0f} per day."
+        ),
+        "",
+        "Demand and sales insights:",
         f"- Strongest promotion lift: {top_promotion['promotion_group']} ({top_promotion['avg_daily_sales_lift_pct']:.1f}%)",
         f"- Strongest festival period: {top_festival['festival_name']}",
         f"- Strongest NRW holiday window: {top_holiday['school_holiday_name']}",
-        (
-            f"- Normal weekend sales were calibrated to roughly "
-            f"{weekend_profile['p25_daily_sales']:,.0f}-{weekend_profile['p75_daily_sales']:,.0f} per day."
-        ),
+        f"- Highest-selling food trend: {top_food_trend['food_trend_theme']}",
+        f"- New poutine launch tracked in the analysis: {top_launch['launch_name']} ({top_launch['launch_sales_band']})",
         (
             f"- Average food-item price moved {tax_policy_row['avg_unit_price_change_pct_vs_pre_2026']:.1f}% "
             "after the VAT policy shift."
         ),
-        f"- New poutine launch tracked in the analysis: {top_launch['launch_name']} ({top_launch['launch_sales_band']})",
-        f"- Largest estimated inventory-wastage driver: {waste_driver_label}",
-        "- Delivered outputs included a cleaning funnel, seasonality analysis, inventory-cycle checks, and wastage observations.",
         "",
-        "Public-safe note:",
-        "Use 'anonymized' or 'simulated' wording if you are sharing the project outside the company.",
+        f"More seasonal-trend details are in the markdown summary: {summary_url}",
+        "",
+        (
+            "After the seasonal analysis, I also checked inventory management using the weekly stock pattern: "
+            "Monday stock for Tue-Wed-Thu and Thursday stock for Fri-Sat-Mon, with Sunday treated as spillover."
+        ),
+        "",
+        "Inventory insights:",
+        f"- Estimated excess stock across the modeled cycles: {inventory_cycles['estimated_waste_units'].sum():,.1f} units",
+        f"- Estimated overall wastage rate: {waste_rate:.1f}%",
+        (
+            f"- Largest wastage driver: {waste_driver_label}"
+            + (
+                f" ({top_waste_driver['estimated_waste_units']:,.1f} units)"
+                if top_waste_driver is not None
+                else ""
+            )
+        ),
+        f"- Low-sales but inconsistent-order-value cycles flagged: {low_sales_cycles}",
+        (
+            f"- Highest-risk stock cycle: {top_waste_cycle['stock_delivery_date']:%Y-%m-%d} "
+            f"with {top_waste_cycle['estimated_waste_units']:,.1f} excess units."
+            if top_waste_cycle is not None
+            else "- No high-risk stock cycle was flagged in this run."
+        ),
+        "",
+        f"More inventory observations are in the markdown file: {inventory_url}",
+        "",
+        (
+            "Finally, I generated dashboards to visualize both the seasonal trends and the inventory-management side, "
+            "so the outputs and recommendations can be communicated more clearly."
+        ),
+        "",
+        "Recommendations from the project:",
+        "- Increase staffing and prep before late-Q4 weeks, Karneval, Christmas-market periods, and strong holiday windows.",
+        "- Translate demand signals into tighter Monday/Thursday stock planning instead of applying blanket stock uplifts.",
+        "- Review festival buffers and low-sales, high-variance product mixes more carefully to reduce waste.",
+        "",
+        "Note:",
+        (
+            "This project was completed with AI support. I wanted to understand how AI can help analysts find things "
+            "faster and work more efficiently. My view is that AI is most useful when you already understand the "
+            "business context behind the data. AI should complement analyst work, not replace it. Through this "
+            "project, I strengthened how I use AI in data analysis."
+        ),
+        "",
+        "Dashboard visuals:",
+        f"![Seasonal Trends Dashboard]({seasonal_dashboard_url})",
+        "",
+        f"![Inventory Management Dashboard]({inventory_dashboard_url})",
     ]
     LINKEDIN_PATH.write_text("\n".join(linkedin_lines) + "\n", encoding="utf-8")
 
@@ -1571,6 +1650,7 @@ def main() -> None:
         new_poutine_summary,
         daily_profile,
         inventory_cycles,
+        food_trend_summary,
     )
 
     print(f"Saved clean dataset to {CLEAN_DATA_PATH}")
