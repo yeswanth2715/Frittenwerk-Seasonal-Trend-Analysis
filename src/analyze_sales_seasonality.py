@@ -40,6 +40,10 @@ TAX_POLICY_PATH = PROCESSED_DIR / "tax_policy_summary.csv"
 NEW_POUTINE_PATH = PROCESSED_DIR / "new_poutine_summary.csv"
 DAILY_PROFILE_PATH = PROCESSED_DIR / "daily_sales_profile.csv"
 FOOD_TREND_PATH = PROCESSED_DIR / "food_trend_summary.csv"
+DAILY_INVENTORY_PATH = PROCESSED_DIR / "daily_inventory_inputs.csv"
+INVENTORY_CYCLE_PATH = PROCESSED_DIR / "inventory_cycle_summary.csv"
+INVENTORY_WASTAGE_CASES_PATH = PROCESSED_DIR / "inventory_wastage_cases.csv"
+INVENTORY_OBSERVATION_PATH = BASE_DIR / "outputs" / "inventory_observation.md"
 
 MONTH_ORDER = [
     "Jan",
@@ -73,6 +77,59 @@ CATEGORY_MAP = {
     "snacks": "Snacks",
     "drinks": "Drinks",
 }
+
+
+def slugify_label(value: str) -> str:
+    return value.strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def dominant_label(values: pd.Series, fallback: str) -> str:
+    mode = values.mode()
+    return str(mode.iloc[0]) if not mode.empty else fallback
+
+
+def classify_sales_band(total_net_sales: float) -> str:
+    if total_net_sales < 3000:
+        return "Below 3k"
+    if total_net_sales < 5000:
+        return "3k-5k"
+    if total_net_sales < 8000:
+        return "5k-8k"
+    if total_net_sales < 10000:
+        return "8k-10k"
+    if total_net_sales <= 12000:
+        return "10k-12k"
+    return "12k+"
+
+
+def get_recommended_stock_pct(
+    total_net_sales: float,
+    dominant_festival: str,
+) -> float:
+    if total_net_sales < 5000:
+        base_pct = 0.20
+    elif total_net_sales < 8000:
+        base_pct = 0.22
+    elif total_net_sales < 10000:
+        base_pct = 0.23
+    else:
+        base_pct = 0.25
+
+    if dominant_festival != "No Festival" and 8000 <= total_net_sales <= 12000:
+        base_pct = max(base_pct, 0.24)
+    if dominant_festival == "Christmas Market":
+        base_pct = 0.25
+    return round(min(base_pct, 0.25), 3)
+
+
+def get_inventory_cycle_details(order_date: pd.Timestamp) -> tuple[pd.Timestamp, str, str]:
+    weekday = order_date.weekday()
+    week_monday = order_date - pd.Timedelta(days=weekday)
+    if weekday in (1, 2, 3):
+        return week_monday, "Monday Delivery", "Tue-Wed-Thu"
+    if weekday == 0:
+        return order_date - pd.Timedelta(days=4), "Thursday Delivery", "Fri-Sat-Mon (+Sun spillover)"
+    return week_monday + pd.Timedelta(days=3), "Thursday Delivery", "Fri-Sat-Mon (+Sun spillover)"
 
 
 def load_raw_sales() -> pd.DataFrame:
@@ -583,6 +640,207 @@ def build_food_trend_summary(sales: pd.DataFrame) -> pd.DataFrame:
     return food_trend_summary
 
 
+def build_daily_inventory_inputs(sales: pd.DataFrame, seasonality: pd.DataFrame) -> pd.DataFrame:
+    category_orders = (
+        sales.groupby(["order_date", "menu_category"])["order_id"]
+        .nunique()
+        .unstack(fill_value=0)
+        .rename(columns=lambda label: f"category_orders_{slugify_label(str(label))}")
+    )
+    daily_inventory = (
+        sales.groupby("order_date", as_index=False)
+        .agg(
+            total_net_sales=("net_sales", "sum"),
+            total_units=("quantity", "sum"),
+            total_orders=("order_id", "nunique"),
+            avg_order_value=("net_sales", "mean"),
+            promotion_share=("promotion_applied_flag", "mean"),
+            local_event_share=("local_event_flag", "mean"),
+            new_poutine_share=("new_poutine_flag", "mean"),
+            dominant_festival=("festival_name", lambda values: dominant_label(values, "No Festival")),
+            dominant_holiday=("school_holiday_name", lambda values: dominant_label(values, "No School Holiday")),
+        )
+        .sort_values("order_date")
+    )
+    daily_inventory = daily_inventory.merge(
+        category_orders.reset_index(),
+        on="order_date",
+        how="left",
+    )
+    daily_inventory["day_name"] = daily_inventory["order_date"].dt.day_name()
+    daily_inventory["month"] = daily_inventory["order_date"].dt.month
+    daily_inventory = daily_inventory.merge(
+        seasonality[["month", "seasonality_index"]],
+        on="month",
+        how="left",
+    )
+    daily_inventory["seasonality_index"] = daily_inventory["seasonality_index"].fillna(1.0)
+    daily_inventory["sales_band"] = daily_inventory["total_net_sales"].apply(classify_sales_band)
+    daily_inventory["recommended_stock_pct"] = daily_inventory.apply(
+        lambda row: get_recommended_stock_pct(row["total_net_sales"], row["dominant_festival"]),
+        axis=1,
+    )
+    daily_inventory["recommended_stock_units"] = (
+        daily_inventory["total_units"] * daily_inventory["recommended_stock_pct"]
+    ).round(1)
+    daily_inventory["rolling_avg_order_value"] = (
+        daily_inventory["avg_order_value"].shift(1).rolling(28, min_periods=7).mean()
+    )
+    daily_inventory["rolling_poutine_share"] = (
+        (
+            daily_inventory.get("category_orders_poutine", pd.Series(0, index=daily_inventory.index))
+            / daily_inventory["total_orders"].replace(0, np.nan)
+        )
+        .shift(1)
+        .rolling(28, min_periods=7)
+        .mean()
+    )
+    daily_inventory["poutine_order_share"] = (
+        daily_inventory.get("category_orders_poutine", pd.Series(0, index=daily_inventory.index))
+        / daily_inventory["total_orders"].replace(0, np.nan)
+    ).fillna(0.0)
+    daily_inventory["loaded_fries_order_share"] = (
+        daily_inventory.get("category_orders_loaded_fries", pd.Series(0, index=daily_inventory.index))
+        / daily_inventory["total_orders"].replace(0, np.nan)
+    ).fillna(0.0)
+    daily_inventory["avg_order_value_deviation_pct"] = (
+        ((daily_inventory["avg_order_value"] / daily_inventory["rolling_avg_order_value"]) - 1) * 100
+    ).replace([np.inf, -np.inf], np.nan)
+    daily_inventory["avg_order_value_deviation_pct"] = daily_inventory["avg_order_value_deviation_pct"].fillna(0.0)
+    daily_inventory["poutine_share_shift_pct"] = (
+        (
+            daily_inventory["poutine_order_share"]
+            - daily_inventory["rolling_poutine_share"].fillna(daily_inventory["poutine_order_share"])
+        ).abs()
+        * 100
+    ).round(2)
+    daily_inventory["low_sales_inconsistent_order_flag"] = (
+        daily_inventory["sales_band"].eq("3k-5k")
+        & daily_inventory["avg_order_value_deviation_pct"].abs().ge(10)
+    )
+    daily_inventory["product_mix_shift_flag"] = (
+        daily_inventory["poutine_share_shift_pct"].ge(6)
+        | daily_inventory["new_poutine_share"].ge(0.08)
+    )
+    inventory_cycle_details = daily_inventory["order_date"].apply(get_inventory_cycle_details)
+    daily_inventory["stock_delivery_date"] = inventory_cycle_details.str[0]
+    daily_inventory["inventory_cycle"] = inventory_cycle_details.str[1]
+    daily_inventory["coverage_window"] = inventory_cycle_details.str[2]
+    return daily_inventory
+
+
+def build_inventory_cycle_summary(daily_inventory: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    inventory_cycles = (
+        daily_inventory.groupby(
+            ["stock_delivery_date", "inventory_cycle", "coverage_window"],
+            as_index=False,
+        )
+        .agg(
+            cycle_days=("order_date", "nunique"),
+            cycle_total_sales=("total_net_sales", "sum"),
+            cycle_total_units=("total_units", "sum"),
+            cycle_avg_order_value=("avg_order_value", "mean"),
+            recommended_stock_units=("recommended_stock_units", "sum"),
+            avg_recommended_stock_pct=("recommended_stock_pct", "mean"),
+            festival_days=("dominant_festival", lambda values: int((values != "No Festival").sum())),
+            christmas_market_days=("dominant_festival", lambda values: int((values == "Christmas Market").sum())),
+            low_sales_inconsistent_days=("low_sales_inconsistent_order_flag", "sum"),
+            product_mix_shift_days=("product_mix_shift_flag", "sum"),
+            dominant_festival=("dominant_festival", lambda values: dominant_label(values, "No Festival")),
+            dominant_holiday=("dominant_holiday", lambda values: dominant_label(values, "No School Holiday")),
+            max_aov_deviation_pct=("avg_order_value_deviation_pct", lambda values: values.abs().max()),
+            max_poutine_share_shift_pct=("poutine_share_shift_pct", "max"),
+            max_new_poutine_share=("new_poutine_share", "max"),
+        )
+        .sort_values("stock_delivery_date")
+    )
+    inventory_cycles["cycle_sales_band"] = inventory_cycles["cycle_total_sales"].apply(classify_sales_band)
+    inventory_cycles["festival_buffer_pct"] = np.select(
+        [
+            inventory_cycles["christmas_market_days"] > 0,
+            inventory_cycles["festival_days"] > 0,
+        ],
+        [
+            0.05,
+            0.03,
+        ],
+        default=0.0,
+    )
+    inventory_cycles["low_sales_inconsistency_buffer_pct"] = np.where(
+        inventory_cycles["low_sales_inconsistent_days"] > 0,
+        0.02,
+        0.0,
+    )
+    inventory_cycles["product_mix_buffer_pct"] = np.where(
+        inventory_cycles["product_mix_shift_days"] > 0,
+        0.02,
+        0.0,
+    )
+    inventory_cycles["observed_stock_order_units"] = (
+        inventory_cycles["recommended_stock_units"]
+        + (
+            inventory_cycles["cycle_total_units"]
+            * (
+                inventory_cycles["festival_buffer_pct"]
+                + inventory_cycles["low_sales_inconsistency_buffer_pct"]
+                + inventory_cycles["product_mix_buffer_pct"]
+            )
+        )
+    ).round(1)
+    inventory_cycles["estimated_waste_units"] = (
+        inventory_cycles["observed_stock_order_units"] - inventory_cycles["recommended_stock_units"]
+    ).clip(lower=0).round(1)
+    inventory_cycles["estimated_waste_rate_pct"] = (
+        inventory_cycles["estimated_waste_units"]
+        / inventory_cycles["observed_stock_order_units"].replace(0, np.nan)
+        * 100
+    ).fillna(0.0).round(1)
+    buffer_columns = {
+        "festival_buffer_pct": "Festival stock uplift",
+        "low_sales_inconsistency_buffer_pct": "Low-sales order value inconsistency",
+        "product_mix_buffer_pct": "Product-mix volatility",
+    }
+    inventory_cycles["primary_wastage_driver"] = inventory_cycles[list(buffer_columns.keys())].idxmax(axis=1).map(
+        buffer_columns
+    )
+    inventory_cycles["primary_wastage_driver"] = np.where(
+        inventory_cycles["estimated_waste_units"] > 0,
+        inventory_cycles["primary_wastage_driver"],
+        "No excess stock",
+    )
+    inventory_cycles["inventory_observation"] = np.select(
+        [
+            inventory_cycles["christmas_market_days"] > 0,
+            inventory_cycles["festival_days"] > 0,
+            inventory_cycles["low_sales_inconsistent_days"] > 0,
+            inventory_cycles["product_mix_shift_days"] > 0,
+        ],
+        [
+            "Extra Christmas-market stock increased expiry risk.",
+            "Festival uplift triggered additional stock and higher expiry risk.",
+            "Low-sales cycle still showed volatile order value, which can distort stock ordering.",
+            "Product mix shifted toward poutine-heavy demand, increasing wastage pressure.",
+        ],
+        default="Regular cycle aligned with the stock rule.",
+    )
+    for column in [
+        "cycle_total_sales",
+        "cycle_avg_order_value",
+        "avg_recommended_stock_pct",
+        "festival_buffer_pct",
+        "low_sales_inconsistency_buffer_pct",
+        "product_mix_buffer_pct",
+        "max_aov_deviation_pct",
+        "max_poutine_share_shift_pct",
+        "max_new_poutine_share",
+    ]:
+        inventory_cycles[column] = inventory_cycles[column].round(2)
+
+    wastage_cases = inventory_cycles[inventory_cycles["estimated_waste_units"] > 0].copy()
+    wastage_cases = wastage_cases.sort_values("estimated_waste_units", ascending=False)
+    return inventory_cycles, wastage_cases
+
+
 def detect_daily_anomalies(sales: pd.DataFrame) -> pd.DataFrame:
     daily_sales = (
         sales.groupby("order_date", as_index=False)
@@ -645,6 +903,7 @@ def create_charts(
     new_poutine_summary: pd.DataFrame,
     daily_profile: pd.DataFrame,
     food_trend_summary: pd.DataFrame,
+    wastage_cases: pd.DataFrame,
 ) -> None:
     CHARTS_DIR.mkdir(parents=True, exist_ok=True)
     sns.set_theme(style="whitegrid")
@@ -822,6 +1081,26 @@ def create_charts(
     plt.savefig(CHARTS_DIR / "food_trend_sales_mix.png", dpi=180)
     plt.close()
 
+    if not wastage_cases.empty:
+        wastage_plot = (
+            wastage_cases.groupby("primary_wastage_driver", as_index=False)["estimated_waste_units"]
+            .sum()
+            .sort_values("estimated_waste_units", ascending=False)
+        )
+        plt.figure(figsize=(10, 5))
+        sns.barplot(
+            data=wastage_plot,
+            x="estimated_waste_units",
+            y="primary_wastage_driver",
+            color="#b56576",
+        )
+        plt.title("Estimated Wastage by Inventory Driver")
+        plt.xlabel("Estimated Excess Stock Units")
+        plt.ylabel("")
+        plt.tight_layout()
+        plt.savefig(CHARTS_DIR / "inventory_wastage_by_driver.png", dpi=180)
+        plt.close()
+
     boxplot_data = pd.concat(
         [
             raw_sales.assign(stage="Raw"),
@@ -864,6 +1143,9 @@ def save_outputs(
     new_poutine_summary: pd.DataFrame,
     daily_profile: pd.DataFrame,
     food_trend_summary: pd.DataFrame,
+    daily_inventory: pd.DataFrame,
+    inventory_cycles: pd.DataFrame,
+    wastage_cases: pd.DataFrame,
 ) -> None:
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     clean_sales.to_csv(CLEAN_DATA_PATH, index=False)
@@ -883,6 +1165,9 @@ def save_outputs(
     new_poutine_summary.to_csv(NEW_POUTINE_PATH, index=False)
     daily_profile.to_csv(DAILY_PROFILE_PATH, index=False)
     food_trend_summary.to_csv(FOOD_TREND_PATH, index=False)
+    daily_inventory.to_csv(DAILY_INVENTORY_PATH, index=False)
+    inventory_cycles.to_csv(INVENTORY_CYCLE_PATH, index=False)
+    wastage_cases.to_csv(INVENTORY_WASTAGE_CASES_PATH, index=False)
 
 
 def write_summary(
@@ -901,6 +1186,8 @@ def write_summary(
     new_poutine_summary: pd.DataFrame,
     daily_profile: pd.DataFrame,
     food_trend_summary: pd.DataFrame,
+    inventory_cycles: pd.DataFrame,
+    wastage_cases: pd.DataFrame,
 ) -> None:
     top_missing = (
         missing_summary[(missing_summary["stage"] == "raw") & (missing_summary["missing_count"] > 0)]
@@ -932,6 +1219,17 @@ def write_summary(
     most_skewed = skewness_summary[skewness_summary["stage"] == "raw"].iloc[
         skewness_summary[skewness_summary["stage"] == "raw"]["skewness"].abs().argmax()
     ]
+    top_wastage_cycle = wastage_cases.iloc[0] if not wastage_cases.empty else None
+    waste_driver = (
+        wastage_cases.groupby("primary_wastage_driver", as_index=False)["estimated_waste_units"]
+        .sum()
+        .sort_values("estimated_waste_units", ascending=False)
+    )
+    top_waste_driver = waste_driver.iloc[0] if not waste_driver.empty else None
+    festival_waste_rate = inventory_cycles.loc[
+        inventory_cycles["festival_days"] > 0, "estimated_waste_rate_pct"
+    ].mean()
+    low_sales_waste_cycles = int((inventory_cycles["low_sales_inconsistent_days"] > 0).sum())
 
     summary_lines = [
         "# Frittenwerk Sales Seasonality Summary",
@@ -992,14 +1290,111 @@ def write_summary(
             f"in total net sales and a '{top_launch['launch_sales_band']}' sales label."
         ),
         "",
+        "## Inventory ordering and wastage observation",
+        "- Inventory review was added after seasonality using a twice-weekly replenishment rule.",
+        "- Monday delivery was modelled to cover Tue-Wed-Thu demand.",
+        "- Thursday delivery was modelled to cover Fri-Sat-Mon demand, with Sunday treated as spillover because the dataset includes Sunday trading.",
+        (
+            f"- Recommended stock volume stayed near {inventory_cycles['avg_recommended_stock_pct'].min() * 100:.1f}% to "
+            f"{inventory_cycles['avg_recommended_stock_pct'].max() * 100:.1f}% of cycle unit demand, depending on the sales band."
+        ),
+        (
+            f"- Cycles with low sales but inconsistent order value were flagged {low_sales_waste_cycles} times as a potential wastage driver."
+        ),
+        (
+            f"- Festival-linked cycles had an average estimated wastage rate of {festival_waste_rate:.1f}%."
+            if pd.notna(festival_waste_rate)
+            else "- Festival-linked cycles did not produce an estimated wastage signal in this run."
+        ),
+    ]
+    if top_waste_driver is not None:
+        summary_lines.append(
+            f"- Largest estimated wastage driver: {top_waste_driver['primary_wastage_driver']} "
+            f"({top_waste_driver['estimated_waste_units']:,.1f} excess stock units)."
+        )
+    if top_wastage_cycle is not None:
+        summary_lines.append(
+            f"- Highest-risk stock cycle started on {top_wastage_cycle['stock_delivery_date']:%Y-%m-%d} "
+            f"with {top_wastage_cycle['estimated_waste_units']:,.1f} estimated excess stock units."
+        )
+    summary_lines.extend(
+        [
+            "",
         "## Operational recommendation",
         (
             "Staffing, prep volume, and promo coordination should be increased ahead of late-Q4 weeks, Karneval, "
-            "Christmas-market periods, and high-footfall holiday windows. The price-reset from the 2026 VAT change "
-            "should also be monitored because it lowered menu prices while keeping demand resilient."
+            "Christmas-market periods, and high-footfall holiday windows. The inventory plan should then translate "
+            "those demand signals into Monday/Thursday stock orders while capping additional festival buffers and "
+            "reviewing low-sales, high-variance product mixes to reduce wastage."
         ),
-    ]
+        ]
+    )
     SUMMARY_PATH.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+
+
+def write_inventory_observation(
+    inventory_cycles: pd.DataFrame,
+    wastage_cases: pd.DataFrame,
+) -> None:
+    total_excess_units = float(inventory_cycles["estimated_waste_units"].sum())
+    total_ordered_units = float(inventory_cycles["observed_stock_order_units"].sum())
+    overall_waste_rate = (total_excess_units / total_ordered_units * 100) if total_ordered_units else 0.0
+    festival_cases = wastage_cases[wastage_cases["festival_days"] > 0]
+    low_sales_cases = wastage_cases[wastage_cases["low_sales_inconsistent_days"] > 0]
+    product_cases = wastage_cases[wastage_cases["product_mix_shift_days"] > 0]
+    top_case = wastage_cases.iloc[0] if not wastage_cases.empty else None
+
+    observation_lines = [
+        "# Inventory Ordering Observation",
+        "",
+        "## Workflow extension",
+        (
+            "After identifying seasonal demand patterns, the workflow was extended into inventory ordering to test "
+            "how operational stock decisions could follow the sales signal."
+        ),
+        "- Monday delivery cycle: covers Tuesday, Wednesday, and Thursday.",
+        "- Thursday delivery cycle: covers Friday, Saturday, and Monday, with Sunday treated as spillover because the data includes Sunday trading.",
+        "- Stock order volume was estimated from cycle unit demand using a 20% to 25% rule based on the sales band.",
+        "",
+        "## What the inventory layer checks",
+        "- Whether festival periods push teams to add extra stock above the base rule.",
+        "- Whether 3k-5k sales days still create wastage when order value becomes inconsistent.",
+        "- Whether product-mix shifts, especially poutine-heavy demand, distort stock ordering and expiry risk.",
+        "",
+        "## Observations",
+        f"- Total estimated excess stock across the modelled cycles: {total_excess_units:,.1f} units.",
+        f"- Overall estimated wastage rate: {overall_waste_rate:.1f}%.",
+        f"- Festival-linked wastage cases: {len(festival_cases):,}.",
+        f"- Low-sales but inconsistent-order-value cases: {len(low_sales_cases):,}.",
+        f"- Product-mix volatility cases: {len(product_cases):,}.",
+    ]
+    if top_case is not None:
+        observation_lines.extend(
+            [
+                (
+                    f"- Highest-risk cycle: {top_case['stock_delivery_date']:%Y-%m-%d} "
+                    f"({top_case['inventory_cycle']}) with {top_case['estimated_waste_units']:,.1f} excess units."
+                ),
+                f"- Main driver in that cycle: {top_case['primary_wastage_driver']}.",
+                f"- Observation note: {top_case['inventory_observation']}",
+            ]
+        )
+    observation_lines.extend(
+        [
+            "",
+            "## Interpretation",
+            (
+                "The seasonal signal is useful for labour planning, but it should not automatically become an "
+                "aggressive inventory uplift. Festival periods can justify extra stock, yet repeated blanket uplifts "
+                "raise expiry risk when actual basket mix or order value does not land where expected."
+            ),
+            (
+                "The same issue appears in some 3k-5k sales cycles: sales stay moderate, but volatile order value "
+                "and product preference shifts can still lead to inconsistent stock ordering and avoidable wastage."
+            ),
+        ]
+    )
+    INVENTORY_OBSERVATION_PATH.write_text("\n".join(observation_lines) + "\n", encoding="utf-8")
 
 
 def write_linkedin_note(
@@ -1010,6 +1405,7 @@ def write_linkedin_note(
     tax_policy_summary: pd.DataFrame,
     new_poutine_summary: pd.DataFrame,
     daily_profile: pd.DataFrame,
+    inventory_cycles: pd.DataFrame,
 ) -> None:
     peak_month = seasonality.sort_values("seasonality_index", ascending=False).iloc[0]
     top_promotion = promotion_summary[
@@ -1025,18 +1421,29 @@ def write_linkedin_note(
     ].iloc[0]
     top_launch = new_poutine_summary.sort_values("total_net_sales", ascending=False).iloc[0]
     weekend_profile = daily_profile.set_index("profile_name").loc["Normal Weekend"]
+    waste_cycles = inventory_cycles[inventory_cycles["estimated_waste_units"] > 0]
+    waste_driver_label = (
+        waste_cycles.groupby("primary_wastage_driver", as_index=False)["estimated_waste_units"]
+        .sum()
+        .sort_values("estimated_waste_units", ascending=False)
+        .iloc[0]["primary_wastage_driver"]
+        if not waste_cycles.empty
+        else "No excess stock"
+    )
 
     linkedin_lines = [
         "# LinkedIn Case Study Draft",
         "",
-        "Project: Sales seasonality and demand-driver analysis for a Frittenwerk-style restaurant operation",
+        "Project: Sales seasonality, inventory planning, and wastage analysis for a Frittenwerk-style restaurant operation",
         "",
         "Suggested wording:",
         (
             "I built an end-to-end restaurant analytics case study inspired by my operations experience. Using "
             "anonymized transaction data, I cleaned inconsistent records, checked missing values, outliers, skewness, "
             "and anomalies, then measured how NRW school holidays, German festival periods, promotions, new poutine "
-            "launches, and the January 1, 2026 gastronomy VAT change shaped sales."
+            "launches, and the January 1, 2026 gastronomy VAT change shaped sales. I then translated the seasonal "
+            "signal into a Monday/Thursday inventory-ordering model to estimate wastage risk from festival stock "
+            "uplifts and product-mix shifts."
         ),
         "",
         "Highlights to mention:",
@@ -1053,7 +1460,8 @@ def write_linkedin_note(
             "after the VAT policy shift."
         ),
         f"- New poutine launch tracked in the analysis: {top_launch['launch_name']} ({top_launch['launch_sales_band']})",
-        "- Delivered outputs included a cleaning funnel, data-quality reports, anomaly checks, and business charts.",
+        f"- Largest estimated inventory-wastage driver: {waste_driver_label}",
+        "- Delivered outputs included a cleaning funnel, seasonality analysis, inventory-cycle checks, and wastage observations.",
         "",
         "Public-safe note:",
         "Use 'anonymized' or 'simulated' wording if you are sharing the project outside the company.",
@@ -1089,6 +1497,8 @@ def main() -> None:
     new_poutine_summary = build_new_poutine_summary(clean_sales_df)
     daily_profile = build_daily_sales_profile(clean_sales_df)
     food_trend_summary = build_food_trend_summary(clean_sales_df)
+    daily_inventory = build_daily_inventory_inputs(clean_sales_df, seasonality)
+    inventory_cycles, wastage_cases = build_inventory_cycle_summary(daily_inventory)
 
     save_outputs(
         clean_sales_df,
@@ -1108,6 +1518,9 @@ def main() -> None:
         new_poutine_summary,
         daily_profile,
         food_trend_summary,
+        daily_inventory,
+        inventory_cycles,
+        wastage_cases,
     )
     create_charts(
         raw_sales,
@@ -1124,6 +1537,7 @@ def main() -> None:
         new_poutine_summary,
         daily_profile,
         food_trend_summary,
+        wastage_cases,
     )
     write_summary(
         raw_sales,
@@ -1141,6 +1555,12 @@ def main() -> None:
         new_poutine_summary,
         daily_profile,
         food_trend_summary,
+        inventory_cycles,
+        wastage_cases,
+    )
+    write_inventory_observation(
+        inventory_cycles,
+        wastage_cases,
     )
     write_linkedin_note(
         seasonality,
@@ -1150,12 +1570,14 @@ def main() -> None:
         tax_policy_summary,
         new_poutine_summary,
         daily_profile,
+        inventory_cycles,
     )
 
     print(f"Saved clean dataset to {CLEAN_DATA_PATH}")
     print(f"Saved processed outputs to {PROCESSED_DIR}")
     print(f"Saved charts to {CHARTS_DIR}")
     print(f"Saved summary to {SUMMARY_PATH}")
+    print(f"Saved inventory observation to {INVENTORY_OBSERVATION_PATH}")
     print(f"Saved LinkedIn draft to {LINKEDIN_PATH}")
 
 

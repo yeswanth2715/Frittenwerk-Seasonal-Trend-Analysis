@@ -1,9 +1,9 @@
 # LinkedIn Case Study Draft
 
-Project: Sales seasonality and demand-driver analysis for a Frittenwerk-style restaurant operation
+Project: Sales seasonality, inventory planning, and wastage analysis for a Frittenwerk-style restaurant operation
 
 Suggested wording:
-I built an end-to-end restaurant analytics case study inspired by my operations experience. Using anonymized transaction data, I cleaned inconsistent records, checked missing values, outliers, skewness, and anomalies, then measured how NRW school holidays, German festival periods, promotions, new poutine launches, and the January 1, 2026 gastronomy VAT change shaped sales.
+I built an end-to-end restaurant analytics case study inspired by my operations experience. Using anonymized transaction data, I cleaned inconsistent records, checked missing values, outliers, skewness, and anomalies, then measured how NRW school holidays, German festival periods, promotions, new poutine launches, and the January 1, 2026 gastronomy VAT change shaped sales. I then translated the seasonal signal into a Monday/Thursday inventory-ordering model to estimate wastage risk from festival stock uplifts and product-mix shifts.
 
 Highlights to mention:
 - Peak seasonal month in the dataset: Dec
@@ -13,7 +13,8 @@ Highlights to mention:
 - Normal weekend sales were calibrated to roughly 6,857-8,699 per day.
 - Average food-item price moved -3.7% after the VAT policy shift.
 - New poutine launch tracked in the analysis: Chicken BBQ Poutine (Medium)
-- Delivered outputs included a cleaning funnel, data-quality reports, anomaly checks, and business charts.
+- Largest estimated inventory-wastage driver: Festival stock uplift
+- Delivered outputs included a cleaning funnel, seasonality analysis, inventory-cycle checks, and wastage observations.
 
 Public-safe note:
 Use 'anonymized' or 'simulated' wording if you are sharing the project outside the company.

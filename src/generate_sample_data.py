@@ -266,16 +266,16 @@ def adjust_festival_multiplier(
 def get_food_trend_theme(order_date: pd.Timestamp, rng: np.random.Generator) -> str:
     month = order_date.month
     if month == 1:
-        themes = ["Vegan Focus", "Healthy Reset", "Loaded Indulgence"]
+        themes = ["Vegan Focus", "Avocado Chicken Bowl", "Tijuana Street Fries"]
         probabilities = [0.46, 0.26, 0.28]
     elif month in (6, 7, 8):
-        themes = ["Spicy Street Food", "Refreshers", "Loaded Indulgence"]
+        themes = ["Sweet Cheese Fire Fries", "BBQ Pulled Pork", "Tijuana Street Fries"]
         probabilities = [0.36, 0.28, 0.36]
     elif month in (10, 11, 12):
-        themes = ["Comfort Food", "Truffle Craze", "Loaded Indulgence"]
+        themes = ["Chili Cheese Fries", "Truffle Craze", "Tijuana Street Fries"]
         probabilities = [0.40, 0.25, 0.35]
     else:
-        themes = ["Loaded Indulgence", "Healthy Reset", "Comfort Food"]
+        themes = ["Tijuana Street Fries", "Avocado Chicken Bowl", "Chili Cheese Fries"]
         probabilities = [0.46, 0.26, 0.28]
     return str(rng.choice(themes, p=probabilities))
 
@@ -390,11 +390,11 @@ def pick_category(
         weights["Vegan Bowl"] += 0.12
         weights["Wraps"] += 0.03
         weights["Loaded Fries"] -= 0.05
-    elif food_trend_theme == "Healthy Reset":
+    elif food_trend_theme == "Avocado Chicken Bowl":
         weights["Vegan Bowl"] += 0.07
         weights["Wraps"] += 0.05
         weights["Loaded Fries"] -= 0.04
-    elif food_trend_theme == "Comfort Food":
+    elif food_trend_theme == "Chili Cheese Fries":
         weights["Loaded Fries"] += 0.08
         weights["Poutine"] += 0.07
         weights["Drinks"] -= 0.04
@@ -402,11 +402,11 @@ def pick_category(
         weights["Loaded Fries"] += 0.07
         weights["Poutine"] += 0.03
         weights["Snacks"] += 0.02
-    elif food_trend_theme == "Spicy Street Food":
+    elif food_trend_theme == "Sweet Cheese Fire Fries":
         weights["Wraps"] += 0.05
         weights["Snacks"] += 0.04
         weights["Drinks"] += 0.02
-    elif food_trend_theme == "Refreshers":
+    elif food_trend_theme == "BBQ Pulled Pork":
         weights["Drinks"] += 0.10
         weights["Loaded Fries"] -= 0.04
         weights["Poutine"] -= 0.03

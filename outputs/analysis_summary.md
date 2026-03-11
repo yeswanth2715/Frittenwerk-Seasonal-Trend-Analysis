@@ -22,7 +22,7 @@ A manager expectation that the following week would be busier was translated int
 - Promotion with strongest daily-sales lift: Karneval Combo (40.2%)
 - Highest average festival sales: Easter Weekend (9,323.39 per day)
 - Strongest NRW school holiday window: Easter Holiday (5,771.55 per day)
-- Highest-selling food trend: Loaded Indulgence (1,830,918.69)
+- Highest-selling food trend: Tijuana Street Fries (1,830,918.69)
 - Strongest weather factor by total sales: Rainy (1,397,441.17)
 - Anomalous sales days flagged: 12
 
@@ -30,5 +30,15 @@ A manager expectation that the following week would be busier was translated int
 - From January 1, 2026, the food VAT relief phase lowered the average food-item price by 3.7% versus the pre-2026 period.
 - Top new poutine launch: Chicken BBQ Poutine with 65,294.59 in total net sales and a 'Medium' sales label.
 
+## Inventory ordering and wastage observation
+- Inventory review was added after seasonality using a twice-weekly replenishment rule.
+- Monday delivery was modelled to cover Tue-Wed-Thu demand.
+- Thursday delivery was modelled to cover Fri-Sat-Mon demand, with Sunday treated as spillover because the dataset includes Sunday trading.
+- Recommended stock volume stayed near 20.0% to 25.0% of cycle unit demand, depending on the sales band.
+- Cycles with low sales but inconsistent order value were flagged 17 times as a potential wastage driver.
+- Festival-linked cycles had an average estimated wastage rate of 15.0%.
+- Largest estimated wastage driver: Festival stock uplift (4,175.7 excess stock units).
+- Highest-risk stock cycle started on 2025-12-11 with 213.9 estimated excess stock units.
+
 ## Operational recommendation
-Staffing, prep volume, and promo coordination should be increased ahead of late-Q4 weeks, Karneval, Christmas-market periods, and high-footfall holiday windows. The price-reset from the 2026 VAT change should also be monitored because it lowered menu prices while keeping demand resilient.
+Staffing, prep volume, and promo coordination should be increased ahead of late-Q4 weeks, Karneval, Christmas-market periods, and high-footfall holiday windows. The inventory plan should then translate those demand signals into Monday/Thursday stock orders while capping additional festival buffers and reviewing low-sales, high-variance product mixes to reduce wastage.

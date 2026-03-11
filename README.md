@@ -10,6 +10,8 @@ While working part-time, a manager mentioned that the following week would likel
 - make the dataset consistent
 - check missing values, duplicates, anomalies, outliers, and skewness
 - test whether NRW school holidays, festivals, new poutine launches, discounts, VAT-driven price changes, and other outside factors explain demand spikes
+- translate the seasonal signal into Monday/Thursday inventory ordering rules
+- check whether extra festival stock, inconsistent order value, and product mix shifts increase wastage or expiry risk
 - visualize the findings in a way that is easy to share on LinkedIn
 
 ## Portfolio note
@@ -32,7 +34,9 @@ The code and outputs follow this funnel:
    Measure missing values, duplicates, invalid records, outliers, skewness, and daily anomalies.
 4. `Business analysis`
    Quantify seasonal trends, promotion lift, festival impact, outside factors, and food trend performance.
-5. `Communication`
+5. `Inventory analysis`
+   Convert the demand pattern into Monday/Thursday stock cycles, estimate recommended stock volume, and flag wastage risk from festival buffers and volatile product mix.
+6. `Communication`
    Save charts, cleaned datasets, markdown summaries, and a LinkedIn-ready project note.
 
 ## Project structure
@@ -54,11 +58,15 @@ The code and outputs follow this funnel:
 - `data/processed/new_poutine_summary.csv`: performance of new poutine launches
 - `data/processed/daily_sales_profile.csv`: normal-day, weekend, festival, and Christmas sales ranges
 - `data/processed/food_trend_summary.csv`: food trend performance
+- `data/processed/daily_inventory_inputs.csv`: daily inventory planning inputs derived from sales
+- `data/processed/inventory_cycle_summary.csv`: Monday/Thursday stock-cycle view with recommended stock and estimated wastage
+- `data/processed/inventory_wastage_cases.csv`: cycles where festival stock, inconsistent order value, or product mix created excess-stock risk
 - `outputs/charts/`: workflow and insight visuals
 - `outputs/analysis_summary.md`: business summary of findings
+- `outputs/inventory_observation.md`: separate observation note on stock ordering and wastage
 - `outputs/linkedin_case_study.md`: portfolio-ready wording for LinkedIn
 - `src/generate_sample_data.py`: generates a Frittenwerk-style raw dataset
-- `src/analyze_sales_seasonality.py`: runs the cleaning, QA, and demand-driver analysis
+- `src/analyze_sales_seasonality.py`: runs the cleaning, QA, demand-driver, inventory, and wastage analysis
 
 ## Setup
 
@@ -86,8 +94,10 @@ After running the project, you can point to:
 - `new_poutine_performance.png`
 - `day_type_sales_profile.png`
 - `food_trend_sales_mix.png`
+- `inventory_wastage_by_driver.png`
 - `order_value_boxplot.png`
 - `analysis_summary.md`
+- `inventory_observation.md`
 - `linkedin_case_study.md`
 
 ## Using real data later
