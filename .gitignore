@@ -10,3 +10,4 @@ data/processed/customer_segment_seasonality.csv
 data/processed/top_customers_by_sales.csv
 outputs/charts/monthly_seasonality_heatmap.png
 outputs/charts/segment_seasonality.png
+outputs/tableau/.~*.twbr

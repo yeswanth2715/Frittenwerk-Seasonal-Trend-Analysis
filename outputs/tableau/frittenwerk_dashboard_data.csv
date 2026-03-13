@@ -1,0 +1,48 @@
+Chart Section,Category,Value
+Monthly Sales,01 | 2024-01,162485.5
+Monthly Sales,02 | 2024-02,180553.1
+Monthly Sales,03 | 2024-03,172308.28
+Monthly Sales,04 | 2024-04,155728.64
+Monthly Sales,05 | 2024-05,161806.39
+Monthly Sales,06 | 2024-06,156760.62
+Monthly Sales,07 | 2024-07,165282.93
+Monthly Sales,08 | 2024-08,137441.19
+Monthly Sales,09 | 2024-09,151611.33
+Monthly Sales,10 | 2024-10,175617.73
+Monthly Sales,11 | 2024-11,182475.73
+Monthly Sales,12 | 2024-12,198270.55
+Monthly Sales,13 | 2025-01,167509.4
+Monthly Sales,14 | 2025-02,164083.17
+Monthly Sales,15 | 2025-03,181224.55
+Monthly Sales,16 | 2025-04,160840.92
+Monthly Sales,17 | 2025-05,175495.38
+Monthly Sales,18 | 2025-06,154140.25
+Monthly Sales,19 | 2025-07,168914.21
+Monthly Sales,20 | 2025-08,135749.44
+Monthly Sales,21 | 2025-09,146313.76
+Monthly Sales,22 | 2025-10,178363.93
+Monthly Sales,23 | 2025-11,193333.01
+Monthly Sales,24 | 2025-12,203930.61
+Monthly Sales,25 | 2026-01,180034.57
+Monthly Sales,26 | 2026-02,190775.6
+Monthly Sales,27 | 2026-03,163745.91
+Seasonality Index,01 | Jan,1.009
+Seasonality Index,02 | Feb,1.059
+Seasonality Index,03 | Mar,1.023
+Seasonality Index,04 | Apr,0.939
+Seasonality Index,05 | May,1.001
+Seasonality Index,06 | Jun,0.923
+Seasonality Index,07 | Jul,0.992
+Seasonality Index,08 | Aug,0.811
+Seasonality Index,09 | Sep,0.884
+Seasonality Index,10 | Oct,1.05
+Seasonality Index,11 | Nov,1.115
+Seasonality Index,12 | Dec,1.194
+Festival Impact,01 | Easter Weekend,9323.39
+Festival Impact,02 | Summer Festival,8116.34
+Festival Impact,03 | Karneval,7663.33
+Festival Impact,04 | Christmas Market,6853.68
+Festival Impact,05 | No Festival,5140.15
+Inventory Wastage Drivers,01 | Festival stock uplift,4175.7
+Inventory Wastage Drivers,02 | Product-mix volatility,1069.4
+Inventory Wastage Drivers,03 | Low-sales order value inconsistency,726.8

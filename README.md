@@ -1,26 +1,21 @@
 # Frittenwerk Sales Seasonality Case Study
 
-This project is a portfolio-safe restaurant analytics case study inspired by a part-time work context at Frittenwerk.
+This project is a portfolio-safe restaurant analytics case study inspired in my part-time work at Frittenwerk.
 
 ## Scenario
 
-While working part-time, a manager mentioned that the following week would likely be busier than usual. Instead of relying only on intuition, this project turns that operational comment into an analytics workflow:
+While working part-time, my manager mentioned that the following week would likely be busier than usual. Instead of relying only on intuition, this project turns that operational comment into an analytics workflow:
 
 - collect the last two years of sales data
 - make the dataset consistent
 - check missing values, duplicates, anomalies, outliers, and skewness
 - test whether NRW school holidays, festivals, new poutine launches, discounts, VAT-driven price changes, and other outside factors explain demand spikes
-- translate the seasonal signal into Monday/Thursday inventory ordering rules
-- check whether extra festival stock, inconsistent order value, and product mix shifts increase wastage or expiry risk
-- visualize the findings in a way that is easy to share on LinkedIn
+- visualize the findings
 
 ## Portfolio note
 
-The sample dataset in this repository is synthetic and anonymized. If you use this project publicly, describe it as:
+The sample dataset in this repository is synthetic and anonymized.(Referred the entities and tables from the original database)
 
-`a sales seasonality and demand-driver case study inspired by my restaurant operations experience, built with anonymized/simulated data`
-
-That keeps the story strong without implying you are sharing confidential company numbers.
 
 ## Workflow
 
@@ -34,21 +29,8 @@ The code and outputs follow this funnel:
    Measure missing values, duplicates, invalid records, outliers, skewness, and daily anomalies.
 4. `Business analysis`
    Quantify seasonal trends, promotion lift, festival impact, outside factors, and food trend performance.
-5. `Inventory analysis`
-   Convert the demand pattern into Monday/Thursday stock cycles, estimate recommended stock volume, and flag wastage risk from festival buffers and volatile product mix.
-6. `Communication`
+5. `Communication`
    Save charts, cleaned datasets, markdown summaries, and a LinkedIn-ready project note.
-
-## Dashboard layer
-
-The project now includes a dashboard-ready output package for BI presentation:
-
-- `Sheet 1 - Uncovering Seasonal Trends`
-  Monthly sales trend, seasonality index, day-type sales profile, festival impact, and food-trend contribution.
-- `Sheet 2 - Inventory Management`
-  Recommended vs observed stock orders, estimated wastage drivers, high-risk stock cycles, and inventory risk patterns.
-
-The generated assets live in `outputs/dashboards/` and can be recreated with `python src/build_dashboard_assets.py`.
 
 ## Project structure
 
@@ -69,17 +51,11 @@ The generated assets live in `outputs/dashboards/` and can be recreated with `py
 - `data/processed/new_poutine_summary.csv`: performance of new poutine launches
 - `data/processed/daily_sales_profile.csv`: normal-day, weekend, festival, and Christmas sales ranges
 - `data/processed/food_trend_summary.csv`: food trend performance
-- `data/processed/daily_inventory_inputs.csv`: daily inventory planning inputs derived from sales
-- `data/processed/inventory_cycle_summary.csv`: Monday/Thursday stock-cycle view with recommended stock and estimated wastage
-- `data/processed/inventory_wastage_cases.csv`: cycles where festival stock, inconsistent order value, or product mix created excess-stock risk
 - `outputs/charts/`: workflow and insight visuals
-- `outputs/dashboards/`: two dashboard mockups and a Power BI/Tableau build guide
 - `outputs/analysis_summary.md`: business summary of findings
-- `outputs/inventory_observation.md`: separate observation note on stock ordering and wastage
 - `outputs/linkedin_case_study.md`: portfolio-ready wording for LinkedIn
 - `src/generate_sample_data.py`: generates a Frittenwerk-style raw dataset
-- `src/analyze_sales_seasonality.py`: runs the cleaning, QA, demand-driver, inventory, and wastage analysis
-- `src/build_dashboard_assets.py`: creates the two-sheet dashboard mockups and BI build guide
+- `src/analyze_sales_seasonality.py`: runs the cleaning, QA, and demand-driver analysis
 
 ## Setup
 
@@ -89,7 +65,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python src/generate_sample_data.py
 python src/analyze_sales_seasonality.py
-python src/build_dashboard_assets.py
 ```
 
 ## Main outputs
@@ -108,26 +83,10 @@ After running the project, you can point to:
 - `new_poutine_performance.png`
 - `day_type_sales_profile.png`
 - `food_trend_sales_mix.png`
-- `inventory_wastage_by_driver.png`
 - `order_value_boxplot.png`
-- `seasonal_trends_dashboard.png`
-- `inventory_management_dashboard.png`
-- `powerbi_tableau_dashboard_guide.md`
 - `analysis_summary.md`
-- `inventory_observation.md`
 - `linkedin_case_study.md`
-
-## Portfolio outputs
-
-If you want to present the project externally, these are the strongest shareable files:
-
-- `outputs/analysis_summary.md`: concise business summary of the seasonal-demand analysis
-- `outputs/inventory_observation.md`: separate operational note on stock planning and wastage
-- `outputs/linkedin_case_study.md`: ready-to-edit LinkedIn post draft
-- `outputs/dashboards/seasonal_trends_dashboard.png`: dashboard mockup for seasonal sales analysis
-- `outputs/dashboards/inventory_management_dashboard.png`: dashboard mockup for inventory management
-- `outputs/dashboards/powerbi_tableau_dashboard_guide.md`: visual/field guide to rebuild the dashboards in Power BI or Tableau
 
 ## Using real data later
 
-When you get a real export, replace `data/raw/frittenwerk_sales_raw.csv` with your actual file and keep the same columns where possible. If the schema changes, update the column mapping in `src/analyze_sales_seasonality.py`.
+After geting a real export, replaced `data/raw/frittenwerk_sales_raw.csv` with actual file and kept the same columns where possible. If the schema changes, update the column mapping in `src/analyze_sales_seasonality.py`.

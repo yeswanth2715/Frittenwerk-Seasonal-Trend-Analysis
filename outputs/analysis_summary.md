@@ -1,7 +1,7 @@
 # Frittenwerk Sales Seasonality Summary
 
 ## Business context
-A manager expectation that the following week would be busier was translated into a structured analytics workflow using restaurant sales, NRW school holidays, German festival windows, menu launches, and the January 1, 2026 gastronomy VAT change.
+My manager expectation that the following week would be busier was translated into a structured analytics workflow using restaurant sales, NRW school holidays, German festival windows, menu launches, and the January 1, 2026 gastronomy VAT change.
 
 ## Data quality workflow
 - Raw rows analysed: 243,555
